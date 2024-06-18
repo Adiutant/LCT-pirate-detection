@@ -76,6 +76,10 @@ class NeuralModel:
 
 
 """
+    To reduce time for making similarity table for every element of first video with every element of second video 
+    there is an algorithm making an equal sets like first of the first video with first of the second video, second of 
+    first video with first of second video etc. Sets are given to neural model 
+    and processing in GPU memory many-at-once. 
     1   2       1   2      .......
     [1] [1]     [1] [2]    .......
     [2] [1]     [2] [2]    .......
