@@ -141,3 +141,35 @@ def get_video_embeddings(filename: str, model_l, feature_extractor_l, model_audi
     filenames = filenames[:min_length]
     return {"video": np.array(video_embeddings_l), "audio": np.array(audio_embeddings_l),
             "segments": segments, "filenames": filenames}
+
+
+def extract_frames(path, video_filename):
+    """
+        Get video as a ndarray of normalized (1/255) frames with shape (n, 400,400,3)
+        where n is an amount of seconds in video
+        :param path: path to file directory
+        :param video_filename: video file name
+        :return:
+    """
+    cap = cv2.VideoCapture(path + video_filename)
+    original_fps = cap.get(cv2.CAP_PROP_FPS)
+
+    frames = []
+    frame_count = 0
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        frame = cv2.resize(frame, (400, 400))
+        if frame_count % int(original_fps) == 0:
+            frames.append(frame)
+
+        frame_count += 1
+
+    cap.release()
+
+    return np.stack(frames, axis=0)
