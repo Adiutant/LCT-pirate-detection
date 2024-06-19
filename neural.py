@@ -35,7 +35,6 @@ def calculate_euclidean_distance(vectors):
     x, y = vectors
     sum_square = K.sum(K.square(x - y), axis=1, keepdims=True)
     euclidean_distance = K.sqrt(K.maximum(sum_square, K.epsilon()))
-    # print(euclidean_distance)
     return euclidean_distance
 
 
@@ -73,6 +72,34 @@ class NeuralModel:
         img_2_f = np.array(img2.tolist(), dtype=np.float32)
         predictions = self.model.predict([img_1_f, img_2_f])
         return predictions
+
+
+def make_similarity_with_model(neural_model: NeuralModel, frames_vec1: np.ndarray, frames_vec2: np.ndarray):
+    """
+    Calculate similarity predictions between frames of two videos using a neural model.
+
+    :param neural_model: NeuralModel: The neural network model used for prediction.
+    :param frames_vec1: np.ndarray: First ndarray of frames with shape (n, 400, 400, 3).
+    :param frames_vec2: np.ndarray: Second ndarray of frames with shape (m, 400, 400, 3).
+    :return: np.ndarray: Matrix of similarity predictions with shape (n, m).
+    """
+    n = len(frames_vec1)
+    m = len(frames_vec2)
+
+    similarity_matrix = np.zeros((n, m), dtype=np.float32)
+
+    for i in range(n):
+        batch_frames_vec1 = np.repeat(frames_vec1[i:i + 1], m, axis=0)
+        batch_frames_vec2 = frames_vec2
+
+        img_1_f = np.array(batch_frames_vec1.tolist(), dtype=np.float32)
+        img_2_f = np.array(batch_frames_vec2.tolist(), dtype=np.float32)
+
+        predictions = neural_model.predict([img_1_f, img_2_f])
+
+        similarity_matrix[i, :] = predictions
+
+    return similarity_matrix
 
 
 """
