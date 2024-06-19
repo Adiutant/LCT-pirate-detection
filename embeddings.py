@@ -173,3 +173,49 @@ def extract_frames(path, video_filename):
     cap.release()
 
     return np.stack(frames, axis=0)
+
+
+def get_video_frames(filename: str, model_audio) -> dict:
+    """
+    Get embeddings from video
+    :param filename: name of the file
+    :param model_audio: model for audio sources
+    :return:
+    """
+    video_frames_l = np.array([]).reshape(0, 400, 400, 3)
+    audio_embeddings_l = np.array([]).reshape(0, 2048)
+    segments = []
+    filenames = []
+    video = mp.VideoFileClip(filename)
+    video_duration = video.duration
+    segment_duration = 10
+    start_time = 0
+    segment_index = 0
+    temp_dir = tempfile.TemporaryDirectory()
+    try:
+        video_frames_l = np.concatenate((video_frames_l,
+                                         extract_frames(temp_dir.name, filename)), axis=0)
+        audio = extract_audio_from_mp4(filename, temp_dir)
+        while start_time < video_duration:
+            end_time = min(start_time + segment_duration, video_duration)
+            if end_time - start_time != segment_duration:
+                start_time += segment_duration
+                continue
+            audio_embeddings_l = np.concatenate((audio_embeddings_l,
+                                                 get_sound_embedding(audio, start_time, end_time, model_audio)), axis=0)
+
+            segments.extend([segment_index] * 10)
+            filename_base = ntpath.basename(filename)
+            filenames.extend([filename_base] * 10)
+            start_time += segment_duration
+            segment_index += 1
+    finally:
+        video.close()
+        temp_dir.cleanup()
+    min_length = min(len(video_frames_l), len(audio_embeddings_l), len(segments), len(filenames))
+    video_embeddings_l = video_frames_l[:min_length]
+    audio_embeddings_l = audio_embeddings_l[:min_length]
+    segments = segments[:min_length]
+    filenames = filenames[:min_length]
+    return {"video": np.array(video_embeddings_l), "audio": np.array(audio_embeddings_l),
+            "segments": segments, "filenames": filenames}

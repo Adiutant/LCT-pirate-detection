@@ -59,3 +59,23 @@ def append_vectors_to_table(db: lancedb.DBConnection, table_name: str, vector_vi
 
     # Add the entire table in one operation
     table.add(t)
+
+
+def append_vectors_to_database_frames(db: lancedb.DBConnection, table_name: str, vector_video,
+                                      vector_audio, filenames: list,  audio_dim):
+    schema = pa.schema([
+        ('vector_video', pa.array(pa.float64())),
+        ('vector_audio', pa.list_(pa.float64(), audio_dim)),
+        ('filename', pa.string())
+    ])
+    if table_name not in db.table_names():
+        _ = db.create_table(table_name, schema=schema)
+    table = db.open_table(table_name)
+
+    vector_array = pa.array(vector_video.tolist())
+    vector_audio_array = pa.array(vector_audio.tolist())
+    filename_array = pa.array(filenames)
+    t = pa.Table.from_arrays([vector_array, vector_audio_array, filename_array], schema=table.schema)
+
+    # Add the entire table in one operation
+    table.add(t)

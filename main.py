@@ -51,6 +51,7 @@ def create_test_csv(model, feature_extractor, database):
     pirate_video = "test/"
     pirate_files = os.listdir(pirate_video)
     test_csv = pd.DataFrame(columns=["ID_piracy", "segment", "ID_license", "segment.1"])
+
     def process_file(file, test_csv):
         percent_dict = {}
         if file.endswith(".mp4"):
@@ -102,6 +103,7 @@ def create_test_csv(model, feature_extractor, database):
     for file in pirate_files:
         test_csv = pd.concat([test_csv, process_file(file, test_csv)], ignore_index=True)
     test_csv.to_csv("output.csv", index=True)
+
 
 def f1_for_all_search(model, feature_extractor, database, threshold: float) -> float:
     """

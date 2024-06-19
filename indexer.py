@@ -38,3 +38,25 @@ def get_embeddings_for_directory(directory: str, model_l, feature_extractor_l, m
                 json.dump(indexed_files, f, indent=4)
                 print(f"Indexed {file}")
     return database
+
+
+def get_frames_for_directory(directory: str, model_audio):
+    if not os.path.exists("indexed_files.json"):
+        indexed_files = {"indexed_files": []}
+    else:
+        indexed_files = json.load(open("indexed_files.json", "r", encoding="utf-8"))
+    database = create_lance_db()
+    files = os.listdir(directory)
+    for file in files:
+        if file.endswith(".mp4"):
+            if file in indexed_files["indexed_files"]:
+                continue
+            else:
+                indexed_files["indexed_files"].append(file)
+            dict_data = get_video_frames(os.path.join(directory, file), model_audio)
+            append_vectors_to_database_frames(database, f"videoframes_{file}", dict_data["video"], dict_data["audio"],
+                                              dict_data["filenames"],  AUDIO_EMBEDDINGS_DIM)
+            with open("indexed_files.json", "w", encoding="utf-8") as f:
+                json.dump(indexed_files, f, indent=4)
+                print(f"Indexed {file}")
+    return database
