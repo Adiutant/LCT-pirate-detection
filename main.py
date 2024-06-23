@@ -87,6 +87,6 @@ if "__main__" == __name__:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     CONFIDENCE_THRESHOLD = 0.05
-    database = get_frames_for_directory("index/", model_audio)
+    database = get_frames_for_directory("index/", model, model_audio)
 
     create_test_csv(model, database)

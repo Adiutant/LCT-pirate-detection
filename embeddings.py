@@ -143,12 +143,13 @@ def get_video_embeddings(filename: str, model_l, feature_extractor_l, model_audi
             "segments": segments, "filenames": filenames}
 
 
-def extract_frames(path, video_filename):
+def extract_frames(path, video_filename, neural_model):
     """
         Get video as a ndarray of normalized (1/255) frames with shape (n, 400,400,3)
         where n is an amount of seconds in video
         :param path: path to file directory
         :param video_filename: video file name
+        :param neural_model: neural_model trained
         :return:
     """
     cap = cv2.VideoCapture(path + video_filename)
@@ -164,7 +165,8 @@ def extract_frames(path, video_filename):
 
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        frame = cv2.resize(frame, (400, 400))
+        frame = cv2.resize(frame, (200, 200))
+        neural_model.embeddings(np.array(frame.tolist(), dtype=np.float32))
         if frame_count % int(original_fps) == 0:
             frames.append(frame)
 
@@ -175,10 +177,11 @@ def extract_frames(path, video_filename):
     return np.stack(frames, axis=0)
 
 
-def get_video_frames(filename: str, model_audio) -> dict:
+def get_video_frames(filename: str, neural_model, model_audio) -> dict:
     """
     Get embeddings from video
     :param filename: name of the file
+    :param neural_model: neural_model trained
     :param model_audio: model for audio sources
     :return:
     """
@@ -195,6 +198,7 @@ def get_video_frames(filename: str, model_audio) -> dict:
     try:
         video_frames_l = np.concatenate((video_frames_l,
                                          extract_frames("", filename)), axis=0)
+
         audio = extract_audio_from_mp4(filename, temp_dir)
         while start_time < video_duration:
             end_time = min(start_time + segment_duration, video_duration)

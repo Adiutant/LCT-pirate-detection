@@ -43,7 +43,7 @@ def get_embeddings_for_directory(directory: str, model_l, feature_extractor_l, m
     return database
 
 
-def get_frames_for_directory(directory: str, model_audio):
+def get_frames_for_directory(directory: str, neural_model, model_audio):
     if not os.path.exists("indexed_files.json"):
         indexed_files = {"indexed_files": []}
     else:
@@ -56,9 +56,9 @@ def get_frames_for_directory(directory: str, model_audio):
                 continue
             else:
                 indexed_files["indexed_files"].append(file)
-            dict_data = get_video_frames(os.path.join(directory, file), model_audio)
+            dict_data = get_video_frames(os.path.join(directory, file), neural_model, model_audio)
             append_vectors_to_database_frames(database, f"videoframes_{file}", dict_data["video"], dict_data["audio"],
-                                              dict_data["filenames"],  AUDIO_EMBEDDINGS_DIM)
+                                              dict_data["filenames"], 50, AUDIO_EMBEDDINGS_DIM)
             with open("indexed_files.json", "w", encoding="utf-8") as f:
                 json.dump(indexed_files, f, indent=4)
                 print(f"Indexed {file}")
