@@ -11,7 +11,7 @@ from panns_inference import AudioTagging
 from neural import *
 from peaks import *
 from db_utils import *
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 
 model_audio = AudioTagging(checkpoint_path=None, device='cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -22,40 +22,48 @@ def create_test_csv(model, database):
     :param model: neural model
     :param database: database connection
     """
-    csv_path = "piracy_val.csv"
+    csv_path = "output.csv"
 
     pirate_video = "test/"
     pirate_files = os.listdir(pirate_video)
     test_csv = pd.DataFrame(columns=["ID_piracy", "segment", "ID_license", "segment.1"])
+    if not os.path.exists(csv_path):
+        with open(csv_path, 'w') as f:
+            f.write("ID_piracy,segment,ID_license,segment\n")
 
     def process_file(file, test_csv):
         percent_dict = {}
         if file.endswith(".mp4"):
             print(file)
-            dict_data = get_video_frames(os.path.join(pirate_video, file), model_audio)
+            dict_data = get_video_frames(os.path.join(pirate_video, file), model, model_audio)
             for table_name in database.table_names():
                 table = database.open_table(table_name)
                 table_filename = table_name.split("_")[1]
+                if table_filename == file:
+                    print("")
                 full_embedding_video = table.search().where(f"filename = '{table_filename}'").limit(100000).to_list()
                 full_embedding_video_vec = [x["vector_video"] for x in full_embedding_video]
                 full_embedding_audio = table.search().where(f"filename = '{table_filename}'").limit(100000).to_list()
                 full_embedding_audio_vec = [x["vector_audio"] for x in full_embedding_audio]
-                matrix = make_similarity_with_model(model, dict_data["video"],
-                                                    np.array(full_embedding_video_vec, dtype=np.float32))
+                matrix = euclidean_distances(dict_data["video"],
+                                             np.array(full_embedding_video_vec, dtype=np.float32))
+                matrix = (matrix < 0.3).astype(int)
                 matrix_audio = cosine_similarity(dict_data["audio"], full_embedding_audio_vec)
                 matrix = matrix + matrix_audio
-                result_peaks_columns = make_plt_columns(matrix, True)
+                result_peaks_columns = make_plt_columns(matrix, False)
                 if result_peaks_columns["interval"] == "":
                     continue
                 else:
-                    result_peaks_rows = make_plt_rows(matrix, True)
+                    result_peaks_rows = make_plt_rows(matrix, False)
                     if result_peaks_rows["interval"] == "":
                         continue
                     interval1 = result_peaks_columns["interval"]
                     interval2 = result_peaks_rows["interval"]
                     intervals = f"{interval1} {interval2}"
+                    score = 10000 if result_peaks_columns["height"] > 1 else result_peaks_columns["width"] + (
+                                result_peaks_columns["height"] * 10)
                     percent_dict[table_filename] = {
-                        "score": result_peaks_columns["width"] + result_peaks_columns["height"],
+                        "score": score,
                         "intervals": f"{intervals}"}
 
             if len(percent_dict.items()) == 0:
@@ -71,15 +79,19 @@ def create_test_csv(model, database):
             })
             print(new_row)
             torch.cuda.empty_cache()
-            return new_row
+            with open(csv_path, 'a') as f:
+                f.write(new_row["ID_piracy"][0] + "," + new_row["segment"][0] + "," + new_row["ID_license"][0] + "," +
+                        new_row["segment.1"][0] + "\n")
+                # new_row.to_csv(f, header=False, index=False)
+            # test_csv = pd.concat([test_csv, new_row], ignore_index=True)
+            # test_csv.to_csv("output.csv", index=True)
 
     # with ThreadPoolExecutor(max_workers=8) as executor:
     #     futures = [executor.submit(process_file, file, test_csv) for file in pirate_files]
     #     print(futures)
     rows = []
     for file in pirate_files:
-        test_csv = pd.concat([test_csv, process_file(file, test_csv)], ignore_index=True)
-    test_csv.to_csv("output.csv", index=True)
+        process_file(file, test_csv)
 
 
 if "__main__" == __name__:

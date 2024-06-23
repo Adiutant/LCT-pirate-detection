@@ -1,5 +1,8 @@
+import os
+
 import keras
 import numpy as np
+import tensorflow as tf
 import tensorflow.keras.backend as K
 from keras.api.layers import Conv2D, MaxPooling2D, Flatten, Dense, Activation, Dropout, Input, Lambda
 from keras.api.models import Sequential, Model
@@ -56,12 +59,16 @@ class NeuralModel:
             distance = Lambda(calculate_euclidean_distance,
                               output_shape=euclidean_dist_output_shape)([feat_vecs_a, feat_vecs_b])
             self.model = Model(inputs=[input_a, input_b], outputs=distance)
-            input_dim_embeddings = (None, 50)
+            input_dim_embeddings = (50,)
             input_embeddings_a = Input(shape=input_dim_embeddings)
             input_embeddings_b = Input(shape=input_dim_embeddings)
-            self.predict_layer = Model(inputs=[input_embeddings_a, input_embeddings_b], outputs=distance)
+            distance_emb = Lambda(calculate_euclidean_distance,
+                                  output_shape=euclidean_dist_output_shape)([input_embeddings_a, input_embeddings_b])
+            self.predict_layer = Model(inputs=[input_embeddings_a, input_embeddings_b], outputs=distance_emb)
         else:
             self.model = keras.models.model_from_json(model_json)
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+        print(tf.config.list_physical_devices('GPU'))
         self.model.load_weights(h5_file)
 
     def predict(self, img1: np.ndarray, img2: np.ndarray):
@@ -72,7 +79,7 @@ class NeuralModel:
             :param img2: np.ndarray: second ndarray of frames
             :return: database connection
         """
-        predictions = self.predict_layer([img1, img2])
+        predictions = self.predict_layer.predict([img1, img2])
         return predictions
 
     def get_image_embeddings_first(self, img: np.ndarray):
@@ -93,30 +100,29 @@ class NeuralModel:
         embeddings = intermediate_layer_model.predict(img)
         return embeddings
 
+
 def make_similarity_with_model(neural_model: NeuralModel, frames_vec1: np.ndarray, frames_vec2: np.ndarray):
     """
     Calculate similarity predictions between frames of two videos using a neural model.
 
     :param neural_model: NeuralModel: The neural network model used for prediction.
-    :param frames_vec1: np.ndarray: First ndarray of frames with shape (n, 400, 400, 3).
-    :param frames_vec2: np.ndarray: Second ndarray of frames with shape (m, 400, 400, 3).
+    :param frames_vec1: np.ndarray: First ndarray of frames with shape (n, 50).
+    :param frames_vec2: np.ndarray: Second ndarray of frames with shape (m, 50).
     :return: np.ndarray: Matrix of similarity predictions with shape (n, m).
     """
     n = len(frames_vec1)
     m = len(frames_vec2)
 
-    similarity_matrix = np.zeros((n, m), dtype=np.float32)
+    # Собираем все входные данные для модели
+    batch_frames_vec1 = np.repeat(frames_vec1[:, np.newaxis, :], m, axis=1).reshape(-1, 50)
+    batch_frames_vec2 = np.tile(frames_vec2, (n, 1))
 
-    for i in range(n):
-        batch_frames_vec1 = np.repeat(frames_vec1[i:i + 1], m, axis=0)
-        batch_frames_vec2 = frames_vec2
+    # Получаем предсказания за один проход
+    predictions = neural_model.predict(batch_frames_vec1, batch_frames_vec2)
 
-        img_1_f = np.array(batch_frames_vec1.tolist(), dtype=np.float32)
-        img_2_f = np.array(batch_frames_vec2.tolist(), dtype=np.float32)
-
-        predictions = neural_model.predict(img_1_f, img_2_f)
-
-        similarity_matrix[i, :] = predictions
+    # Заполняем матрицу схожести
+    predictions = predictions.reshape(n, m)
+    similarity_matrix = predictions
 
     return similarity_matrix
 
