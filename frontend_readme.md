@@ -5,7 +5,7 @@
 ```bash
 # Важно, укажите зависимости в файле next.config.mjs в env
 # Установка зависимостей
-npm run i
+npm i
 ```
 
 Зависимости (next.config.mjs)
