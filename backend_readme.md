@@ -7,7 +7,7 @@
 ### Стек технологий
 Asp net core, Quartz, Postgresql, S3, Caddy
 
-### Развертыввание
+### Развертывание
 Сервис доступен из публичного репозитория docker.io `eiparfenov/lct-backend`
 
 Для развертывания рекомендуется использовать docker-compose.yml файл из проекта.
