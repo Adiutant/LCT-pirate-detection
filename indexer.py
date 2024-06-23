@@ -1,5 +1,8 @@
 import json
 import os
+
+import lancedb
+
 from db_utils import *
 from embeddings import *
 

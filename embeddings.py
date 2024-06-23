@@ -194,7 +194,7 @@ def get_video_frames(filename: str, model_audio) -> dict:
     temp_dir = tempfile.TemporaryDirectory()
     try:
         video_frames_l = np.concatenate((video_frames_l,
-                                         extract_frames(temp_dir.name, filename)), axis=0)
+                                         extract_frames("", filename)), axis=0)
         audio = extract_audio_from_mp4(filename, temp_dir)
         while start_time < video_duration:
             end_time = min(start_time + segment_duration, video_duration)
