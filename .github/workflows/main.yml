@@ -15,5 +15,5 @@ jobs:
         submodules: recursive
     - name: Git Submodule Update
       run: |
-        cd lct_backend && git pull --allow-unrelated-histories
+        cd lct-backend && git pull --allow-unrelated-histories
         git submodule update --remote --recursive --merge --force
