@@ -1,0 +1,19 @@
+name: LCT
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:          
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: Git Submodule Update
+      run: |
+        git pull --recurse-submodules
+        git submodule update --remote --recursive --merge
