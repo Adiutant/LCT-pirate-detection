@@ -1,6 +1,6 @@
 import keras
 import numpy as np
-import tensorflow.python.keras as K
+import tensorflow.keras.backend as K
 from keras.api.layers import Conv2D, MaxPooling2D, Flatten, Dense, Activation, Dropout, Input, Lambda
 from keras.api.models import Sequential, Model
 
@@ -8,7 +8,7 @@ from keras.api.models import Sequential, Model
 def build_base_network(input_shape):
     seq = Sequential()
     nb_filter = [6, 12]
-    kernel_size = 3
+    kernel_size = 7
 
     # Convolutional layer 1
     seq.add(Conv2D(nb_filter[0], (kernel_size, kernel_size), input_shape=input_shape,
@@ -27,13 +27,20 @@ def build_base_network(input_shape):
     seq.add(Flatten())
     seq.add(Dense(128, activation='relu'))
     seq.add(Dropout(0.1))
-    seq.add(Dense(50, activation='relu'))
+    seq.add(Dense(50, activation='relu', name="Embeddings"))
     return seq
 
 
 def euclidean_dist_output_shape(shapes):
     shape1, shape2 = shapes
     return shape1[0], 1
+
+
+def calculate_euclidean_distance(vectors):
+    x, y = vectors
+    sum_square = K.sum(K.square(x - y), axis=1, keepdims=True)
+    euclidean_distance = K.sqrt(K.maximum(sum_square, K.epsilon()))
+    return euclidean_distance
 
 
 class NeuralModel:
@@ -46,20 +53,16 @@ class NeuralModel:
             base_network = build_base_network(input_dim)
             feat_vecs_a = base_network(input_a)
             feat_vecs_b = base_network(input_b)
-            distance = Lambda(self.calculate_euclidean_distance,
+            distance = Lambda(calculate_euclidean_distance,
                               output_shape=euclidean_dist_output_shape)([feat_vecs_a, feat_vecs_b])
             self.model = Model(inputs=[input_a, input_b], outputs=distance)
+            input_dim_embeddings = (None, 50)
+            input_embeddings_a = Input(shape=input_dim_embeddings)
+            input_embeddings_b = Input(shape=input_dim_embeddings)
+            self.predict_layer = Model(inputs=[input_embeddings_a, input_embeddings_b], outputs=distance)
         else:
             self.model = keras.models.model_from_json(model_json)
-            self.model.load_weights(h5_file)
-        self.embeddings = None
-
-    def calculate_euclidean_distance(self, vectors):
-        x, y = vectors
-        self.embeddings = x
-        sum_square = K.sum(K.square(x - y), axis=1, keepdims=True)
-        euclidean_distance = K.sqrt(K.maximum(sum_square, K.epsilon()))
-        return euclidean_distance
+        self.model.load_weights(h5_file)
 
     def predict(self, img1: np.ndarray, img2: np.ndarray):
         """
@@ -69,16 +72,26 @@ class NeuralModel:
             :param img2: np.ndarray: second ndarray of frames
             :return: database connection
         """
-        img_1_f = np.array(img1.tolist(), dtype=np.float32)
-        img_2_f = np.array(img2.tolist(), dtype=np.float32)
-        predictions = self.model.predict([img_1_f, img_2_f])
+        predictions = self.predict_layer([img1, img2])
         return predictions
 
-    def get_image_embeddings(self, img: np.ndarray):
-        img2_stub = np.zeros((200, 200, 3))
-        self.model.predict(img, img2_stub)
-        return self.embeddings
+    def get_image_embeddings_first(self, img: np.ndarray):
+        img = np.array(img, dtype=np.float32)
 
+        # Создание промежуточной модели для получения эмбеддингов первой подмодели
+        intermediate_layer_model = Model(inputs=self.model.input[0],
+                                         outputs=self.model.get_layer("sequential").output)
+        embeddings = intermediate_layer_model.predict(img)
+        return embeddings
+
+    def get_image_embeddings_second(self, img: np.ndarray):
+        img = np.array(img, dtype=np.float32)
+
+        # Создание промежуточной модели для получения эмбеддингов второй подмодели
+        intermediate_layer_model = Model(inputs=self.model.input[1],
+                                         outputs=self.model.get_layer("sequential").output)
+        embeddings = intermediate_layer_model.predict(img)
+        return embeddings
 
 def make_similarity_with_model(neural_model: NeuralModel, frames_vec1: np.ndarray, frames_vec2: np.ndarray):
     """

@@ -83,7 +83,7 @@ def create_test_csv(model, database):
 
 
 if "__main__" == __name__:
-    model = NeuralModel("./model.weights.h5")
+    model = NeuralModel("./models/model.weights.h5")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     CONFIDENCE_THRESHOLD = 0.05
