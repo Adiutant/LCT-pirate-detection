@@ -1,36 +1,22 @@
-## Инструкция
+# Backend сервис для хакатона Лидеры цифровой трансформации
 
-Первый запуск
+### Описание
+Сервис принимает видео от пользователя и сохраняет его в s3 сервис, после чего передает его на анализ для ml. 
+После анализа от ml собирает данные и передает в frontend. 
 
-```bash
-# Важно, укажите зависимости в файле next.config.mjs в env
-# Установка зависимостей
-npm run i
-```
+### Стек технологий
+Asp net core, Quartz, Postgresql, S3, Caddy
 
-Зависимости (next.config.mjs)
-```js
-// Пример
-const nextConfig = {
-    env: {
-        HTTP_VIDEO_DOWNLOAD: 'http://caddy:5291/api/videos/download', // адрес пополнения БД без модерации
-        WS_VIDEO_DOWNLOAD: 'http://caddy:5291/api/status/currentStatus', // адрес проверки статуса пополнения
-        HTTP_VIDEO_MODERATION: 'http://caddy:5291/api/videos/verify', // адрес пополнения БД с модерацией
-        WS_VIDEO_MODERATION: 'http://caddy:5291/api/status/currentStatus', // адрес проверки статуса модерации
-    }
-};
-```
+### Развертыввание
+Сервис доступен из публичного репозитория docker.io `eiparfenov/lct-backend`
 
-```bash
-# Запуск в dev режиме
-npm run dev
-```
+Для развертывания рекомендуется использовать docker-compose.yml файл из проекта.
 
-```bash
-# Сборка приложения
-npm run build
-# Запуск сборки
-npm run start
-```
-
-По умолчанию сайт должен открыть на [http://localhost:3000](http://localhost:3000), однако в случае, если порт занят, то он моет занять порт на 1 выше (пример: если порт 3000 занят, то он займёт 3001).
+### Конфигурация
+Конфигурация через переменные окружения
+* `ConnectionStrings__PostgresDb`: строка подключения к базе
+* `S3Options__AccessKeyId`: ид ключа для s3
+* `S3Options__SecretAccessKey`: ключ к s3
+* `S3Options__ServiceUrl`: url s3 сервиса
+* `S3Options__BucketName`: имя бакета
+* `UrlGeneratorOptions__Template`: шаблон для генерации ссылки `https://3ce0-109-252-24-49.ngrok-free.app/videos-bucket/videos/{0}.mp4`
