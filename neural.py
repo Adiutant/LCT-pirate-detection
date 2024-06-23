@@ -31,13 +31,6 @@ def build_base_network(input_shape):
     return seq
 
 
-def calculate_euclidean_distance(vectors):
-    x, y = vectors
-    sum_square = K.sum(K.square(x - y), axis=1, keepdims=True)
-    euclidean_distance = K.sqrt(K.maximum(sum_square, K.epsilon()))
-    return euclidean_distance
-
-
 def euclidean_dist_output_shape(shapes):
     shape1, shape2 = shapes
     return shape1[0], 1
@@ -53,12 +46,20 @@ class NeuralModel:
             base_network = build_base_network(input_dim)
             feat_vecs_a = base_network(input_a)
             feat_vecs_b = base_network(input_b)
-            distance = Lambda(calculate_euclidean_distance,
+            distance = Lambda(self.calculate_euclidean_distance,
                               output_shape=euclidean_dist_output_shape)([feat_vecs_a, feat_vecs_b])
             self.model = Model(inputs=[input_a, input_b], outputs=distance)
         else:
             self.model = keras.models.model_from_json(model_json)
             self.model.load_weights(h5_file)
+        self.embeddings = None
+
+    def calculate_euclidean_distance(self, vectors):
+        x, y = vectors
+        self.embeddings = x
+        sum_square = K.sum(K.square(x - y), axis=1, keepdims=True)
+        euclidean_distance = K.sqrt(K.maximum(sum_square, K.epsilon()))
+        return euclidean_distance
 
     def predict(self, img1: np.ndarray, img2: np.ndarray):
         """
@@ -72,6 +73,11 @@ class NeuralModel:
         img_2_f = np.array(img2.tolist(), dtype=np.float32)
         predictions = self.model.predict([img_1_f, img_2_f])
         return predictions
+
+    def get_image_embeddings(self, img: np.ndarray):
+        img2_stub = np.zeros((200, 200, 3))
+        self.model.predict(img, img2_stub)
+        return self.embeddings
 
 
 def make_similarity_with_model(neural_model: NeuralModel, frames_vec1: np.ndarray, frames_vec2: np.ndarray):
@@ -95,7 +101,7 @@ def make_similarity_with_model(neural_model: NeuralModel, frames_vec1: np.ndarra
         img_1_f = np.array(batch_frames_vec1.tolist(), dtype=np.float32)
         img_2_f = np.array(batch_frames_vec2.tolist(), dtype=np.float32)
 
-        predictions = neural_model.predict([img_1_f, img_2_f])
+        predictions = neural_model.predict(img_1_f, img_2_f)
 
         similarity_matrix[i, :] = predictions
 
