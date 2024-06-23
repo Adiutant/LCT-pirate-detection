@@ -39,7 +39,7 @@ def euclidean_dist_output_shape(shapes):
 class NeuralModel:
     def __init__(self, h5_file=None, model_json=None):
         if not h5_file or not model_json:
-            input_dim = (400, 400, 3)
+            input_dim = (200, 200, 3)
             input_a = Input(shape=input_dim)
             input_b = Input(shape=input_dim)
 
