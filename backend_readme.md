@@ -7,16 +7,23 @@
 ### Стек технологий
 Asp net core, Quartz, Postgresql, S3, Caddy
 
-### Развертывание
+### Развертыввание
 Сервис доступен из публичного репозитория docker.io `eiparfenov/lct-backend`
 
-Для развертывания рекомендуется использовать docker-compose.yml файл из проекта, который находится в папке services/lct_service.
+Для развертывания рекомендуется использовать docker-compose.yml файл из проекта.
 
 ### Конфигурация
 Конфигурация через переменные окружения
 * `ConnectionStrings__PostgresDb`: строка подключения к базе
+* `ConnectionStrings__MlService`: url к ml сервису - его нужно настроить при запуске
 * `S3Options__AccessKeyId`: ид ключа для s3
 * `S3Options__SecretAccessKey`: ключ к s3
 * `S3Options__ServiceUrl`: url s3 сервиса
 * `S3Options__BucketName`: имя бакета
-* `UrlGeneratorOptions__Template`: шаблон для генерации ссылки `https://3ce0-109-252-24-49.ngrok-free.app/videos-bucket/videos/{0}.mp4`
+* `UrlGeneratorOptions__Template`: шаблон для генерации ссылки `https://3ce0-109-252-24-49.ngrok-free.app/videos-bucket/videos/{0}.mp4` - эта шаблон используется для генерации ссылки, которая отправляется в сервис машинного обучения для скачивания видео. При развернтывании может потребоваться заменить домен в ссылке.
+
+## Запуск
+Для запуска использовать команду в директории services.
+```bash
+docker compose up
+```
