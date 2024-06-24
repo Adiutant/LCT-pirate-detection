@@ -136,3 +136,43 @@ def make_plt_columns(matrix_l, plt_verbose=False):
         plt.show(block=True)
 
     return {"interval": f"{left_ips_x}-{right_ips_x}", "width": max_peak_width, "height": max_peak_height}
+
+
+def make_similarity_with_model(neural_model, frames_vec1: np.ndarray, frames_vec2: np.ndarray):
+    """
+    Calculate similarity predictions between frames of two videos using a neural model.
+
+    :param neural_model: Any Model : The neural network model used for prediction.
+    :param frames_vec1: np.ndarray: First ndarray of frames with shape (n, 50).
+    :param frames_vec2: np.ndarray: Second ndarray of frames with shape (m, 50).
+    :return: np.ndarray: Matrix of similarity predictions with shape (n, m).
+    """
+    n = len(frames_vec1)
+    m = len(frames_vec2)
+
+    # Собираем все входные данные для модели
+    batch_frames_vec1 = np.repeat(frames_vec1[:, np.newaxis, :], m, axis=1).reshape(-1, 50)
+    batch_frames_vec2 = np.tile(frames_vec2, (n, 1))
+
+    # Получаем предсказания за один проход
+    predictions = neural_model.classify(batch_frames_vec1, batch_frames_vec2)
+
+    # Заполняем матрицу схожести
+    predictions = predictions.reshape(n, m)
+    similarity_matrix = predictions
+
+    return similarity_matrix
+
+
+"""
+    To reduce time for making similarity table for every element of first video with every element of second video 
+    there is an algorithm making an equal sets like first of the first video with first of the second video, second of 
+    first video with first of second video etc. Sets are given to neural model 
+    and processing in GPU memory many-at-once. 
+    1   2       1   2      .......
+    [1] [1]     [1] [2]    .......
+    [2] [1]     [2] [2]    .......
+    [3] [1]     [3] [2]    .......
+    .   .       .   .      .......
+    .   .       .   .
+"""

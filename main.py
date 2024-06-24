@@ -1,22 +1,23 @@
 import numpy as np
 import pandas as pd
+from transformers import ViTFeatureExtractor
 
 from indexer import *
 from embeddings import *
 import operator
 from concurrent.futures import ThreadPoolExecutor
 import torch
-from transformers import ViTModel, ViTFeatureExtractor
 from panns_inference import AudioTagging
 from neural import *
 from peaks import *
 from db_utils import *
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
+from trained_vit import ViTForImageClassification
 
 model_audio = AudioTagging(checkpoint_path=None, device='cuda' if torch.cuda.is_available() else 'cpu')
 
 
-def create_test_csv(model, database):
+def create_test_csv(model, feature_extractor, database):
     """
     Create a CSV file with the results of the test.
     :param model: neural model
@@ -35,7 +36,7 @@ def create_test_csv(model, database):
         percent_dict = {}
         if file.endswith(".mp4"):
             print(file)
-            dict_data = get_video_frames(os.path.join(pirate_video, file), model, model_audio)
+            dict_data = get_video_embeddings(os.path.join(pirate_video, file), model, feature_extractor, model_audio)
             for table_name in database.table_names():
                 table = database.open_table(table_name)
                 table_filename = table_name.split("_")[1]
@@ -45,9 +46,8 @@ def create_test_csv(model, database):
                 full_embedding_video_vec = [x["vector_video"] for x in full_embedding_video]
                 full_embedding_audio = table.search().where(f"filename = '{table_filename}'").limit(100000).to_list()
                 full_embedding_audio_vec = [x["vector_audio"] for x in full_embedding_audio]
-                matrix = euclidean_distances(dict_data["video"],
-                                             np.array(full_embedding_video_vec, dtype=np.float32))
-                matrix = (matrix < 0.3).astype(int)
+                matrix = cosine_similarity(dict_data["video"],
+                                           np.array(full_embedding_video_vec, dtype=np.float32))
                 matrix_audio = cosine_similarity(dict_data["audio"], full_embedding_audio_vec)
                 matrix = matrix + matrix_audio
                 result_peaks_columns = make_plt_columns(matrix, False)
@@ -61,7 +61,7 @@ def create_test_csv(model, database):
                     interval2 = result_peaks_rows["interval"]
                     intervals = f"{interval1} {interval2}"
                     score = 10000 if result_peaks_columns["height"] > 1 else result_peaks_columns["width"] + (
-                                result_peaks_columns["height"] * 10)
+                            result_peaks_columns["height"] * 10)
                     percent_dict[table_filename] = {
                         "score": score,
                         "intervals": f"{intervals}"}
@@ -95,10 +95,15 @@ def create_test_csv(model, database):
 
 
 if "__main__" == __name__:
-    model = NeuralModel("./models/model.weights.h5")
+    # model = NeuralModel("./models/model.weights.h5")
+    model = ViTForImageClassification()
+    feature_extractor = ViTFeatureExtractor.from_pretrained('google/vit-base-patch16-224-in21k')
+
+    model.load_state_dict(torch.load(os.path.join("models", 'vit_weights.pth')))
+    model.eval()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    model.to(device)
     CONFIDENCE_THRESHOLD = 0.05
-    database = get_frames_for_directory("index/", model, model_audio)
+    database = get_embeddings_for_directory("index/", model, feature_extractor, model_audio)
 
-    create_test_csv(model, database)
+    create_test_csv(model, feature_extractor, database)

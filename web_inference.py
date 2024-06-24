@@ -12,6 +12,7 @@ from transformers import ViTModel, ViTFeatureExtractor
 from panns_inference import AudioTagging
 import torch
 import hashlib
+from trained_vit import *
 
 from app import app
 from indexer import *
@@ -53,7 +54,7 @@ class Task:
 
 class MainApplication:
     def __init__(self):
-        self.vit = ViTModel.from_pretrained('google/vit-base-patch16-224')
+        self.vit = ViTForImageClassification()
         self.feature_extractor = ViTFeatureExtractor.from_pretrained('google/vit-base-patch16-224')
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.vit.to(device)

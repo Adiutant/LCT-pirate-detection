@@ -18,16 +18,11 @@ def get_embeddings_vit(frames, feature_extractor_l, model_l):
     :param model_l: model like VIT transformer
     :return:
     """
-    # Преобразуем кадры из формата OpenCV в формат PIL
-    images = [Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)) for frame in frames]
-    inputs = feature_extractor_l(images=images, return_tensors="pt")
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # Перемещаем данные на GPU
-    inputs = {k: v.to(device) for k, v in inputs.items()}
+    inputs = feature_extractor_l(images=frames, return_tensors="pt")
 
     with torch.no_grad():
         outputs = model_l(**inputs)
-    return outputs.last_hidden_state.mean(dim=1)
+    return outputs
 
 
 def extract_frame_embeddings_vit(video_path: str, model_l, feature_extractor_l, frame_interval=None) -> np.ndarray:
@@ -54,13 +49,15 @@ def extract_frame_embeddings_vit(video_path: str, model_l, feature_extractor_l, 
             break
 
         if frame_count % frame_interval == 0:
+            frame = cv2.resize(frame, (300, 300))
             frames.append(frame)
 
         frame_count += 1
 
     cap.release()
+    frames = np.stack(frames, axis=0)
     outputs = get_embeddings_vit(frames, feature_extractor_l, model_l)
-    return outputs.detach().cpu().squeeze().numpy()
+    return outputs
 
 
 def get_sound_embedding(audio, start_time, end_time, model_audio, n=10):
