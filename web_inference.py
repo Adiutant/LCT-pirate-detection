@@ -111,7 +111,7 @@ class MainApplication:
                                                 "intervals": f"{intervals}", }
 
         if len(percent_dict.items()) == 0:
-            return None
+            return "empty", "empty"
         predicted_license_video = max(percent_dict.items(), key=lambda item: item[1]["score"])[0]
 
         return percent_dict[predicted_license_video]["intervals"], predicted_license_video

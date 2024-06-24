@@ -53,8 +53,8 @@ class ViTForImageClassification(torch.nn.Module):
         # cls_embedding_1 = outputs_1.last_hidden_state[:, 0, :]  # CLS token
         # cls_embedding_2 = outputs_2.last_hidden_state[:, 0, :]  # CLS token
 
-        embeddings_1 = embeddings_1.to(self.device)
-        embeddings_2 = embeddings_2.to(self.device)
+        embeddings_1 = torch.from_numpy(embeddings_1).to(self.device)
+        embeddings_2 = torch.from_numpy(embeddings_2).to(self.device)
 
         # Concatenate the embeddings
         combined_embeddings = torch.cat((embeddings_1, embeddings_2), dim=1)
