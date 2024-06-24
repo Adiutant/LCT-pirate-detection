@@ -142,7 +142,7 @@ def make_similarity_with_model(neural_model, frames_vec1: np.ndarray, frames_vec
     """
     Calculate similarity predictions between frames of two videos using a neural model.
 
-    :param neural_model: Any Model : The neural network model used for prediction.
+    :param neural_model: Any Model: The neural network model used for prediction.
     :param frames_vec1: np.ndarray: First ndarray of frames with shape (n, 50).
     :param frames_vec2: np.ndarray: Second ndarray of frames with shape (m, 50).
     :return: np.ndarray: Matrix of similarity predictions with shape (n, m).
@@ -150,29 +150,29 @@ def make_similarity_with_model(neural_model, frames_vec1: np.ndarray, frames_vec
     n = len(frames_vec1)
     m = len(frames_vec2)
 
+    max_len = max(n, m)
+
+    # Дополняем меньший массив нулями
+    if n < max_len:
+        padding = np.zeros((max_len - n, frames_vec1.shape[1]))
+        frames_vec1 = np.vstack([frames_vec1, padding])
+    elif m < max_len:
+        padding = np.zeros((max_len - m, frames_vec2.shape[1]))
+        frames_vec2 = np.vstack([frames_vec2, padding])
+
     # Собираем все входные данные для модели
-    batch_frames_vec1 = np.repeat(frames_vec1[:, np.newaxis, :], m, axis=1).reshape(-1, 50)
-    batch_frames_vec2 = np.tile(frames_vec2, (n, 1))
+    batch_frames_vec1 = np.repeat(frames_vec1[:, np.newaxis, :], max_len, axis=1).reshape(-1, frames_vec1.shape[1])
+    batch_frames_vec2 = np.tile(frames_vec2, (max_len, 1))
 
     # Получаем предсказания за один проход
     predictions = neural_model.classify(batch_frames_vec1, batch_frames_vec2)
 
-    # Заполняем матрицу схожести
-    predictions = predictions.reshape(n, m)
-    similarity_matrix = predictions
+    # Заполняем матрицу схожести и убираем дополненные части
+    predictions = predictions.reshape(max_len, max_len)
 
-    return similarity_matrix
+    if n < max_len:
+        predictions = predictions[:n, :]
+    if m < max_len:
+        predictions = predictions[:, :m]
 
-
-"""
-    To reduce time for making similarity table for every element of first video with every element of second video 
-    there is an algorithm making an equal sets like first of the first video with first of the second video, second of 
-    first video with first of second video etc. Sets are given to neural model 
-    and processing in GPU memory many-at-once. 
-    1   2       1   2      .......
-    [1] [1]     [1] [2]    .......
-    [2] [1]     [2] [2]    .......
-    [3] [1]     [3] [2]    .......
-    .   .       .   .      .......
-    .   .       .   .
-"""
+    return predictions

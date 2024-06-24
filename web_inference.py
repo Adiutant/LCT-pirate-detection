@@ -148,13 +148,19 @@ def set_video_download():
 
     if filename == "":
         return jsonify({"error": "filename cant be empty"}), 422
+
+    response = requests.head(download_url)
+    total_size_in_bytes = int(response.headers.get('content-length', 0))
+    block_size = 1024 * 1024  # 1 МБ
+    filename = download_url.split("/")[-1]
     response = requests.get(download_url, stream=True)
-
     with open(os.path.join(temp_dir.name, filename), "wb") as handle:
-        for data in tqdm(response.iter_content()):
-            handle.write(data)
-
-    hashsum = md5_checksum(os.path.join(temp_dir.name, filename))
+        with tqdm(total=total_size_in_bytes, unit='iB', unit_scale=True) as progress_bar:
+            for data in response.iter_content(block_size):
+                handle.write(data)
+                progress_bar.update(len(data))
+    response.close()
+    # hashsum = md5_checksum(os.path.join(temp_dir.name, filename))
     # if hashsum != hashsum_md5:
     #     return jsonify({"error": "file integrity cant be verified"}), 500
 
