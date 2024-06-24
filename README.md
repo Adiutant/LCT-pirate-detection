@@ -9,6 +9,7 @@
 - Комолов Тимур
 ## Запуск приложения
 ### Запуск ML сервиса
+Создать директорию _models_, закинуть в неё веса модели VIT под названием vit_weights.pth, скачав по ссылке: https://drive.google.com/drive/folders/1MMlg4lYux8ltx0iAdRuX68ETHgQeP1_7?usp=sharing
 ```
 docker build -t image_ml -f Dockerfile .
 ```
